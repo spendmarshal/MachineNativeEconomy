@@ -272,14 +272,16 @@ export function buildStatement(bundle: EvidenceBundle, opts: StatementOptions = 
     .sort((a, b) => b[1].count - a[1].count)
     .map(([key, v]) => (v.known === v.count ? { key, count: v.count, total: money(v.total) } : { key, count: v.count, total: money(v.total), detail: v.known ? `amount recorded for ${v.known} of ${v.count}` : "amount not recorded" }));
 
-  // allowed at the quote or charge stage, never settled, not denied afterwards
+  // allowed at the quote or charge stage, never settled, not denied afterwards, and not reclaimed (a reclaimed
+  // pre-approval was never delivered: it belongs under reclaimed, not under "allowed but not settled")
+  const reclaimedIntents = new Set(receipts.filter((r) => r.kind === "preapproval.reclaimed").map((r) => r.intentId).filter((x): x is string => !!x));
   const unsettledRaw: Array<UnsettledItem & { value: bigint | null }> = [];
   const seenIntent = new Set<string>();
   for (const r of periodReceipts) {
     if (r.kind !== "decision" || r.data.effect !== "allow" || !r.intentId) continue;
     const stage = str(r.data.stage);
     if (stage === "precheck" || stage === "simulate" || stage === "structural") continue;
-    if (settledIntents.has(r.intentId) || seenIntent.has(r.intentId)) continue;
+    if (settledIntents.has(r.intentId) || reclaimedIntents.has(r.intentId) || seenIntent.has(r.intentId)) continue;
     const deniedAt = deniedIntents.get(r.intentId);
     if (deniedAt !== undefined && deniedAt >= ms(r.ts)) continue;
     seenIntent.add(r.intentId);

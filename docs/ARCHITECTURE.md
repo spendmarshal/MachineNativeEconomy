@@ -244,7 +244,7 @@ sequenceDiagram
 
 * Store drivers are JSON (one process), SQLite (one file) and Postgres (several gateway instances on one database, ADR-0025). Copying existing JSON or SQLite data into Postgres, read replicas and cache invalidation across instances are not built yet.
 * The standard x402 path has been exercised against the bundled facilitator behaving as a public one; a live run against Coinbase's or Stellar's facilitator on a testnet is the next step and needs a funded key.
-* Orphaned pre-approvals (standard path, settlement never happened) keep their spend charge until a `reclaim` function lands.
-* MPP covers one-shot payments; subscriptions and streaming are milestone 1.9.
+* Orphaned pre-approvals (standard path, settlement never happened) keep their spend charge until `POST /v1/maintenance/reclaim` runs; deployments schedule it, nothing runs it by itself.
+* Subscriptions are fixed terms charged by the payee with a charge token; per-unit metered streaming is not built.
 * Escalation approvals are per intent; approval policies (who may approve what) are expressed only through registered keys.
 * No confirmation-depth handling for reorgs yet.

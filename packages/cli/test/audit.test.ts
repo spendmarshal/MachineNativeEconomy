@@ -307,19 +307,29 @@ describe("unattributed spend", () => {
       row({ spend: 0.02, startTime: at(4), prompt_tokens: 5, api_key: "b".repeat(64), metadata: {} }),
     ]);
     const [f] = of(r, "unattributed-spend");
-    expect(f).toMatchObject({ count: 2, amount: 0, title: "$0.05 on 2 calls with no team, customer or agent tag (62.5% of spend)", evidence: ["agent-key: $0.03", "bbbbbbbbbb…bbbbbb: $0.02"], evidenceTotal: 2 });
+    expect(f).toMatchObject({ count: 2, amount: 0, title: "$0.05 on 2 calls with no team, customer, agent or request tag (62.5% of spend)", evidence: ["agent-key: $0.03", "bbbbbbbbbb…bbbbbb: $0.02"], evidenceTotal: 2 });
     expect(f?.unconfirmed).toBeCloseTo(0.05, 10);
-    expect(f?.detail).toContain("37.5% of spend carries a team, customer (end_user) or agent tag");
+    expect(f?.detail).toContain("37.5% of spend carries a team, customer (end_user), agent or request tag");
     expect(r.coverage.attributedSpendShare).toBeCloseTo(0.375, 10);
     expect(r.unconfirmed).toBe(0); // only possible repeats and loops count as unconfirmed spend
-    expect(formatAuditText(r)).toContain("attribution: 37.5% of spend carries a team, customer or agent tag");
+    expect(formatAuditText(r)).toContain("attribution: 37.5% of spend carries a team, customer, agent or request tag");
   });
 
-  it("says nothing when no row is tagged, or every row is", () => {
+  it("counts LiteLLM request tags, set per request or inherited from the key, as attribution", () => {
+    const r = run([row({ request_tags: ["client-x"] }), row({ metadata: { tags: ["client-y"] }, startTime: at(1), prompt_tokens: 7 }), row({ request_tags: [], spend: 0.03, startTime: at(2), prompt_tokens: 8 })]);
+    const [f] = of(r, "unattributed-spend");
+    expect(f).toMatchObject({ count: 1, amount: 0 });
+    expect(r.coverage.attributedSpendShare).toBeCloseTo(0.4, 10);
+  });
+
+  it("reports an export where no row is tagged as a finding of its own, without counting it, and says nothing when every row is", () => {
     const none = run([row(), row({ startTime: at(1), prompt_tokens: 7 })]);
-    expect(of(none, "unattributed-spend")).toEqual([]);
+    const [f] = of(none, "unattributed-spend");
+    expect(f).toMatchObject({ count: 2, amount: 0, unconfirmed: 0, title: "No call carries a client tag: $0.02 on 2 calls cannot be assigned to a client or job as exported", label: "confirmed: no team, customer (end_user), agent or request tag on any row" });
+    expect(f?.nextStep).toContain("metadata.tags");
+    expect(none.unconfirmed).toBe(0);
     expect(none.coverage.attributedSpendShare).toBeNull();
-    expect(formatAuditText(none)).toContain("attribution: no team, customer or agent tags in this export");
+    expect(formatAuditText(none)).toContain("attribution: no team, customer, agent or request tags in this export");
     const all = run([row({ team_id: "t" }), row({ team_id: "t", startTime: at(1), prompt_tokens: 7 })]);
     expect(of(all, "unattributed-spend")).toEqual([]);
     expect(all.coverage.attributedSpendShare).toBe(1);
@@ -405,7 +415,7 @@ describe("report and rendering", () => {
     expect(text).toContain(
       "coverage: 4 rows read, 0 skipped; 0 with unknown outcome (0.0% of rows); 1 key, 1 session shared by 2+ rows (0 one-off session ids ignored), 0 agents, 1 model; cache keys on 2 rows, no request content (the v2 export never carries it); no caps supplied (pass --budgets to check allowances)",
     );
-    expect(text).toContain("attribution: no team, customer or agent tags in this export (a team key tags every row; end_user only when the caller sends user)");
+    expect(text).toContain("attribution: no team, customer, agent or request tags in this export (a team key tags every row; end_user only when the caller sends user; metadata.tags become request_tags)");
     expect(text).toContain("spend by outcome: ok $0.03, failed $0.50 (1 other), empty $0.00, unknown $0.00 (sums to $0.53)");
     expect(text).toContain("avoidable spend in question: $0.51 (96.2% of spend: failed and empty calls plus confirmed repeats, each row once); unconfirmed: $0.00 in possible repeats and possible loops (listed, not counted)");
     expect(text).toMatch(/\n1\. 1 failed or empty call, \$0\.50 billed \(94\.3% of spend\)\n   label: failed run or empty response/);
@@ -426,7 +436,8 @@ describe("report and rendering", () => {
 
   it("says so when the export has no rows, and when there is nothing to report", () => {
     expect(formatAuditText(run([]))).toContain("no rows found");
-    expect(formatAuditText(run([row()]))).toContain("no findings:");
+    expect(formatAuditText(run([row({ team_id: "team-a" })]))).toContain("no findings:");
+    expect(formatAuditText(run([row()]))).toContain("1. No call carries a client tag");
   });
 
   it("formats money", () => {

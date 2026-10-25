@@ -16,6 +16,19 @@ agent / MCP client ──▶ gateway ──▶ payee (x402 | MPP | …)
                    ReceiptRegistry.sol (anchored evidence)
 ```
 
+## If you run agents for clients through LiteLLM, start here
+
+Two commands work today without installing anything, offline, on your own machine, and print no prompts:
+
+```bash
+npx @spendmarshal/cli audit-logs spend-logs.json          # last month's LiteLLM export: repeats, retry storms, loops, failed and empty calls, spend no client can be billed for
+npx @spendmarshal/cli statement evidence.json --period 2026-10 --provider-total 412.50   # a client's month-end statement from the gateway's signed record, reconciled to the provider's total
+```
+
+`docs/AUDIT_LOGS.md` says what a LiteLLM export carries and what the report can and cannot conclude from it;
+`docs/STATEMENT.md` describes the statement and its reconciliation rules. The rest of this page is the gateway those
+records come from: the policy engine, the approvals and the evidence format, and the payment rails it settles on.
+
 ## Why this exists
 
 As of October 2026 every payment rail for agents is vendor-bundled and none of them interoperate: x402 (Coinbase → Linux Foundation), MPP (Stripe/Tempo), L402, AP2 (Google), Visa TAP, Mastercard Agent Pay. Wallets from Coinbase, Cloudflare and Circle each bundle custody + policy + one rail. Disputes, refunds, multi-agent budgets, portable audit evidence and sybil-resistant reputation are unsolved. In the only documented 2026 prompt-injection drain of an agent wallet (Grok/Bankrbot, 4 May 2026), a hidden instruction in a social-media post moved about 3 billion DRB tokens, worth roughly $150–200k (OECD.AI incident record).

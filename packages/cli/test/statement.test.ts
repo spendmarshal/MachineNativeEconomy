@@ -223,6 +223,20 @@ describe("denials, unsettled allows, reclaims and events", () => {
     expect(s.reclaimed).toEqual({ count: 1, total: "0.001000" });
   });
 
+  it("does not list a reclaimed pre-approval as allowed but not settled, so it cannot be offered as a provider's charge", () => {
+    const s = build(
+      bundle([
+        allowQuote("2026-10-02T00:00:00.000Z", "int_expired", "1000"),
+        receipt("preapproval.reclaimed", "2026-10-09T00:00:00.000Z", { value: "1000" }, { intentId: "int_expired" }),
+      ]),
+      { providerTotal: "0.001000" },
+    );
+    expect(s.notSettled.count).toBe(0);
+    expect(s.reclaimed).toEqual({ count: 1, total: "0.001000" });
+    expect(s.reconciliation?.components.map((c) => c.key)).toEqual([]);
+    expect(s.reconciliation?.verdict).toBe("unexplained");
+  });
+
   it("turns kill switches, policy activations, approver keys and anchors into event lines", () => {
     const s = build(
       bundle([
@@ -391,6 +405,21 @@ describe("the command", () => {
     expect(marked.code).toBe(0);
     expect(marked.out).toContain("verification: FAILED");
     expect(marked.out).toContain("NOT VERIFIED: the bundle failed");
+  });
+
+  it("runs through the installed command file, which calls main whatever path the package manager wires", async () => {
+    const { existsSync } = await import("node:fs");
+    const { spawnSync } = await import("node:child_process");
+    const bin = new URL("../bin/spendmarshal.js", import.meta.url);
+    const dist = new URL("../dist/index.js", import.meta.url);
+    if (!existsSync(dist)) return; // the command file imports the built package; a source-only checkout skips this
+    const good = file("good-bin.json", vector("01-basic.json").bundle);
+    const r = spawnSync(process.execPath, [new URL(bin).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "verify", good], { encoding: "utf8" });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("VERIFIED");
+    const usage = spawnSync(process.execPath, [new URL(bin).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { encoding: "utf8" });
+    expect(usage.status).toBe(1);
+    expect(usage.stdout).toContain("spendmarshal <command>");
   });
 
   it("rejects what it cannot read with exit code 2 and a message", async () => {

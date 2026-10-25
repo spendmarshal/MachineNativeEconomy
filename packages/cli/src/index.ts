@@ -7,6 +7,8 @@ import { audit, formatAuditHtml, formatAuditText, mergeBudgets, parseBudgets, pa
 import { buildStatement, formatStatementHtml, formatStatementText, parsePeriod } from "./statement.js";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export { verifyEvidence, formatReport };
 export { audit, formatAuditText, formatAuditHtml, parseBudgets, parseExport } from "./audit.js";
@@ -176,5 +178,14 @@ function usage(): number {
   return 1;
 }
 
-const isMain = process.argv[1] && /[\\/](index\.(ts|js))$/.test(process.argv[1]) && import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/").split("/").slice(-2).join("/"));
+// Runs main only when this file is the script Node was started with (`node dist/index.js`, `tsx src/index.ts`), compared
+// by real path so a symlink or a differently spelled path still matches. The installed command is bin/spendmarshal.js,
+// which calls main unconditionally and never depends on this guard.
+const isMain = (() => {
+  try {
+    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (isMain) main().then((code) => process.exit(code));

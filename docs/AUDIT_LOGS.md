@@ -24,6 +24,9 @@ jq 'def strip: del(.messages, .response, .proxy_server_request); if type == "arr
 
 Better still, run the tool locally and share only the report: nothing leaves the machine.
 
+A proxy configured to prune its spend logs (`general_settings.maximum_spend_logs_retention_period`, off unless set) keeps
+only that window of raw rows; export what is retained and the report states the days it covers.
+
 ## What the export carries, and what it does not
 
 These facts come from LiteLLM's own code and documentation (read 19 October 2026) and decide what the report can say.
@@ -34,6 +37,7 @@ These facts come from LiteLLM's own code and documentation (read 19 October 2026
 | `session_id` | Always filled: the caller's session when the request carried one (`litellm_session_id` in the body, `metadata.session_id`, or an `x-litellm-session-id` header), otherwise a per-request trace id | An id seen on one row only is not a session. Sessions, agents, customers and keys are the scopes, in that order |
 | `status`, `spend`, tokens on failures | `failure`, `spend` 0 and zero tokens, unless a stream broke after chunks were delivered or a guardrail rejected a finished response; `metadata.error_information` carries `error_code`, `error_class`, `error_message` | Failures are counted as attempts and classified (budget refusal, rate limit, auth, upstream, other); their dollars are reported but are mostly zero |
 | `team_id`, `end_user`, `agent_id` | `team_id` comes with the virtual key's team without the caller doing anything; `end_user` only when the caller sends `user` or a customer header | These are the client tags. Spend without any of them is reported as unattributed when other rows have one |
+| `request_tags` | The tags LiteLLM attached to the request: `metadata.tags` in the body, the `x-litellm-tags` header, or tags set on the virtual key, which every request through that key inherits. An empty list otherwise | A row with a tag counts as attributed, like one with a team, customer or agent. An export where no row carries any of these is reported as a finding of its own: nothing in it can be assigned to a client |
 | `messages`, `response`, `proxy_server_request` | Never returned by `/spend/logs/v2`. The legacy `/spend/logs?summarize=false` returns `proxy_server_request` with the request body when `general_settings.store_prompts_in_spend_logs` is on | Request content, where present, is hashed in memory to confirm repeats; otherwise repeats stay "possible" |
 
 So the first export from a typical deployment (caching off, no session ids, no customer tags) can show failed attempts,

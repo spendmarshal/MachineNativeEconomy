@@ -1,7 +1,9 @@
 # Releasing to npm
 
 Two packages are published: `@spendmarshal/core` (types, policy evaluator, evidence verifier) and `@spendmarshal/cli`
-(`spendmarshal verify`, `spendmarshal audit-logs`). The CLI depends on core at the same version, so core goes first.
+(`spendmarshal verify`, `spendmarshal statement`, `spendmarshal audit-logs`). The CLI depends on core at the same version,
+so core goes first. The installed command is `bin/spendmarshal.js`, which calls `main` unconditionally; `dist/index.js`
+runs `main` only when it is the script Node started, compared by real path.
 Everything else in the monorepo stays unpublished for now.
 
 The maintainer runs every command below personally. No assistant or automation logs in to npm, and nothing is ever written

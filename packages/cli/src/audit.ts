@@ -43,6 +43,8 @@ export interface SpendRow {
   team: string | null;
   endUser: string | null;
   agent: string | null;
+  /** LiteLLM's request_tags: set per request (metadata.tags, the x-litellm-tags header) or inherited from the key */
+  tags: string[];
   /** a caller-set session shared by at least two rows; null when the id is unique to this row */
   session: string | null;
   spend: number;
@@ -305,6 +307,7 @@ function normalise(c: unknown, index: number): { row: SpendRow } | { skip: strin
       team: str(o.team_id) ?? str(meta.user_api_key_team_id),
       endUser: str(o.end_user) ?? str(meta.user_api_key_end_user_id),
       agent: str(o.agent_id) ?? str(o.billing_agent_id),
+      tags: strings(o.request_tags).length ? strings(o.request_tags) : strings(meta.tags),
       session: str(o.session_id),
       spend: num(o.spend),
       promptTokens,
@@ -397,7 +400,8 @@ const short = (s: string) => (s.length > 20 ? `${s.slice(0, 10)}…${s.slice(-6)
 const sum = (rows: readonly SpendRow[]) => rows.reduce((a, r) => a + r.spend, 0);
 const scopeOf = (r: SpendRow) => r.session ?? r.agent ?? (r.endUser ? `${r.apiKey}:${r.endUser}` : r.apiKey);
 const keyName = (r: SpendRow) => r.keyAlias ?? short(r.apiKey);
-const tagged = (r: SpendRow) => r.team !== null || r.endUser !== null || r.agent !== null;
+const tagged = (r: SpendRow) => r.team !== null || r.endUser !== null || r.agent !== null || r.tags.length > 0;
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.length > 0) : []);
 const ids = (rows: readonly SpendRow[]) => rows.slice(0, EVIDENCE_ROWS).map((r) => r.id);
 const median = (values: readonly number[]): number => {
   const s = [...values].sort((a, b) => a - b);
@@ -684,19 +688,39 @@ function listPrice(r: SpendRow, prices?: PriceTable): number | undefined {
 /** 6. Unattributed spend: rows without a team, customer or agent tag, in an export where other rows have one. */
 function unattributedSpend(rows: SpendRow[], totals: AuditReport["totals"]): Found[] {
   const untagged = rows.filter((r) => !tagged(r));
-  if (!untagged.length || untagged.length === rows.length) return []; // nothing to compare against: the coverage line says so
+  if (!untagged.length) return [];
+  if (untagged.length === rows.length) {
+    // nothing to compare against, and that is the finding: as exported, no call can be assigned to a client at all
+    return [
+      {
+        rows: untagged,
+        finding: {
+          detector: "unattributed-spend",
+          title: `No call carries a client tag: ${money(totals.spend)} on ${plural(rows.length, "call")} cannot be assigned to a client or job as exported`,
+          label: "confirmed: no team, customer (end_user), agent or request tag on any row",
+          amount: 0,
+          unconfirmed: 0,
+          count: rows.length,
+          detail: "Nothing in this export says which client or job a call belonged to, so no per-client figure, rebill or statement can be produced from it. The whole amount is unattributed; it is not added to the unconfirmed total because there is nothing to compare it against. Keys alone name a client only if one key per client is your convention",
+          nextStep: "give each client its own LiteLLM team, send user (end_user) on every call, or set metadata.tags per client (LiteLLM stores them as request_tags); the second export then shows spend per client",
+          evidence: topBy(untagged, keyName, 8),
+          evidenceTotal: countBy(untagged, keyName),
+        },
+      },
+    ];
+  }
   return [
     {
       rows: untagged,
       finding: {
         detector: "unattributed-spend",
-        title: `${money(sum(untagged))} on ${plural(untagged.length, "call")} with no team, customer or agent tag (${pct(sum(untagged), totals.spend)} of spend)`,
+        title: `${money(sum(untagged))} on ${plural(untagged.length, "call")} with no team, customer, agent or request tag (${pct(sum(untagged), totals.spend)} of spend)`,
         label: "unattributed spend (cannot be assigned to a client or job as exported)",
         amount: 0,
         unconfirmed: sum(untagged),
         count: untagged.length,
-        detail: `${pct(totals.spend - sum(untagged), totals.spend)} of spend carries a team, customer (end_user) or agent tag; the rest cannot be rebilled or reviewed per client as it stands. A key alone does not name the client unless one key per client is your convention`,
-        nextStep: "give each client its own LiteLLM team, or send user (end_user) on every call; the tag then travels into every row",
+        detail: `${pct(totals.spend - sum(untagged), totals.spend)} of spend carries a team, customer (end_user), agent or request tag; the rest cannot be rebilled or reviewed per client as it stands. A key alone does not name the client unless one key per client is your convention`,
+        nextStep: "give each client its own LiteLLM team, send user (end_user) on every call, or set metadata.tags per client; the tag then travels into every row",
         evidence: topBy(untagged, keyName, 8),
         evidenceTotal: countBy(untagged, keyName),
       },
@@ -920,8 +944,8 @@ function summaryLines(r: AuditReport): string[] {
   ].join(", ");
   const attribution =
     c.attributedSpendShare === null
-      ? "attribution: no team, customer or agent tags in this export (a team key tags every row; end_user only when the caller sends user)"
-      : `attribution: ${pct(c.attributedSpendShare, 1)} of spend carries a team, customer or agent tag`;
+      ? "attribution: no team, customer, agent or request tags in this export (a team key tags every row; end_user only when the caller sends user; metadata.tags become request_tags)"
+      : `attribution: ${pct(c.attributedSpendShare, 1)} of spend carries a team, customer, agent or request tag`;
   return [
     `SpendMarshal audit-logs: ${r.period.from!.slice(0, 10)} to ${r.period.to!.slice(0, 10)} (${plural(r.period.days, "day")}), ${plural(r.totals.rows, "row")}, ${money(r.totals.spend)} spend`,
     `coverage: ${c.rowsRead} rows read, ${c.rowsSkipped} skipped${c.rowsSkipped ? ` (${reasons(c.skippedReasons)})` : ""}; ${c.unknownOutcomes} with unknown outcome (${pct(c.unknownOutcomes, r.totals.rows)} of rows); ${plural(c.keys, "key")}, ${plural(c.sessions, "session")} shared by 2+ rows (${plural(c.oneOffSessionIds, "one-off session id")} ignored), ${plural(c.agents, "agent")}, ${plural(c.models, "model")}; ${identity}; ${caps}`,
