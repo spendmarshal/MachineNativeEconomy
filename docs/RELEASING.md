@@ -36,15 +36,22 @@ Then pack with pnpm, which rewrites the CLI's `workspace:*` dependency to the pu
 `prepack` (a rebuild, so a stale `dist` cannot ship), and publish each tarball with npm and the token file:
 
 ```bash
-cd packages/core && pnpm pack && npm publish spendmarshal-core-0.0.1.tgz --access public --userconfig ../../local/.npmrc && rm spendmarshal-core-0.0.1.tgz
+cd packages/core && pnpm pack && npm publish spendmarshal-core-0.0.1.tgz --access public --userconfig ../../local/.npmrc --no-browser && rm spendmarshal-core-0.0.1.tgz
 ```
 
 ```bash
-cd packages/cli && pnpm pack && npm publish spendmarshal-cli-0.0.1.tgz --access public --userconfig ../../local/.npmrc && rm spendmarshal-cli-0.0.1.tgz
+cd packages/cli && pnpm pack && npm publish spendmarshal-cli-0.0.1.tgz --access public --userconfig ../../local/.npmrc --no-browser && rm spendmarshal-cli-0.0.1.tgz
 ```
 
 Replace `0.0.1` with the version being released. A dry run that uploads nothing: add `--dry-run` to the `npm publish`
 command; `pnpm pack` alone shows the tarball's contents.
+
+The token does not bypass two-factor, so each publish asks for an approval: npm prints a one-time link, and the maintainer
+opens it in the browser where the npm account and its passkey live and approves. `--no-browser` matters: without it npm
+also waits for Enter at a "Press ENTER to open in the browser" prompt before it finishes, opens the system's default
+browser (which may be the wrong profile), and the approval link expires within a few minutes, after which the publish
+fails with a 404 on npm's `done` check and has to be run again. The second publish within a short time reuses the first
+approval. Learned on 25 October 2026 while publishing 0.0.1.
 
 Afterwards, anyone can run the diagnostic on their own machine without installing anything:
 
