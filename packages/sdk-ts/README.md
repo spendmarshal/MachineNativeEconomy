@@ -12,4 +12,4 @@ const r = await agent.pay({ url: "https://data.example/v1/quote", maxAmount: "0.
 - `SpendMarshalAdmin`: issue credentials, approvals, policy versions, evidence export, kill switch, reclaim
 - `spendmarshalTools(client)` returns JSON-Schema tool definitions for OpenAI function calling, Vercel AI, LangChain and Google ADK
 
-Part of [SpendMarshal](https://github.com/atharnouman/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.
+Part of [SpendMarshal](https://github.com/spendmarshal/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.

@@ -14,4 +14,4 @@ app.get("/v1/quote", { preHandler: paid({ rails: ["x402", "mpp"], price, payTo, 
 
 Fastify is the reference host; the `paid()` logic is framework-neutral.
 
-Part of [SpendMarshal](https://github.com/atharnouman/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.
+Part of [SpendMarshal](https://github.com/spendmarshal/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.

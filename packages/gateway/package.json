@@ -13,14 +13,14 @@
     "ai agents",
     "fastify"
   ],
-  "homepage": "https://github.com/atharnouman/MachineNativeEconomy#readme",
+  "homepage": "https://github.com/spendmarshal/MachineNativeEconomy#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/atharnouman/MachineNativeEconomy.git",
+    "url": "git+https://github.com/spendmarshal/MachineNativeEconomy.git",
     "directory": "packages/gateway"
   },
   "bugs": {
-    "url": "https://github.com/atharnouman/MachineNativeEconomy/issues"
+    "url": "https://github.com/spendmarshal/MachineNativeEconomy/issues"
   },
   "engines": {
     "node": ">=20.17"

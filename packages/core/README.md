@@ -14,4 +14,4 @@ import { parsePolicyYaml, evaluate } from "@spendmarshal/core";
 
 No network, no storage, no keys: everything here runs anywhere, including inside an auditor's offline verifier.
 
-Part of [SpendMarshal](https://github.com/atharnouman/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.
+Part of [SpendMarshal](https://github.com/spendmarshal/MachineNativeEconomy), the open-source Agentic Payment Gateway: policy, settlement and evidence between AI agents and any payment rail. Apache-2.0. Alpha: APIs change between 0.0.x versions.
