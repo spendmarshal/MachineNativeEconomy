@@ -2,7 +2,7 @@
   "name": "@spendmarshal/gateway",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "author": "Athar Nouman <atharnouman@gmail.com>",
+  "author": "SpendMarshal <hello@spendmarshal.com>",
   "description": "Agentic Payment Gateway service: policy enforcement below the model, session-key signer, x402 + MPP pay-side adapters, local facilitator, signed receipt log, evidence export",
   "keywords": [
     "agentic payments",

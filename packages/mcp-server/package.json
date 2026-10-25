@@ -2,7 +2,7 @@
   "name": "@spendmarshal/mcp-server",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "author": "Athar Nouman <atharnouman@gmail.com>",
+  "author": "SpendMarshal <hello@spendmarshal.com>",
   "description": "MCP server exposing the Agentic Payment Gateway as tools (pay, simulate, receipts, export evidence) to Claude, ChatGPT, Gemini and any MCP client",
   "keywords": [
     "mcp",

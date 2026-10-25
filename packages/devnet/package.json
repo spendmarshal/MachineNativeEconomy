@@ -2,7 +2,7 @@
   "name": "@spendmarshal/devnet",
   "version": "0.0.1",
   "license": "Apache-2.0",
-  "author": "Athar Nouman <atharnouman@gmail.com>",
+  "author": "SpendMarshal <hello@spendmarshal.com>",
   "description": "Local development chain helpers for the Agentic Payment Gateway: anvil lifecycle, contract deployment, EIP-7702 delegation of an EOA to AgentAccount, well-known dev keys",
   "keywords": [
     "anvil",
